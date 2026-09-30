@@ -15,7 +15,7 @@ export default async function handler(req, res) {
 
   if (!frontend) return res.status(500).send("FRONTEND_URL is not configured");
   if (error) return res.redirect(`${frontend}/?tiktok_error=${encodeURIComponent(error_description || error)}#bot`);
-  if (!code || !state || !expectedState || !crypto.timingSafeEqual(Buffer.from(state), Buffer.from(expectedState))) {
+  if (!code || !state || !expectedState || state.length !== expectedState.length || !crypto.timingSafeEqual(Buffer.from(state), Buffer.from(expectedState))) {
     return res.status(400).send("Invalid OAuth state");
   }
 
@@ -65,7 +65,7 @@ export default async function handler(req, res) {
       return res.redirect(`${frontend}/?tiktok_error=storage_failed#bot`);
     }
 
-    res.setHeader("Set-Cookie", "tiktok_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0");
+    res.setHeader("Set-Cookie", [`tiktok_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0`, `tiktok_session=${encodeURIComponent(encrypt(tokens.open_id))}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000`]);
     res.redirect(`${frontend}/?tiktok=connected#bot`);
   } catch (e) {
     console.error(e);
