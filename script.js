@@ -1,4 +1,4 @@
-const FLOWBOT_API="https://floybot-backend-rs44.vercel.app";
+const FLOWBOT_API="https://floybot-backend.vercel.app";
 
 const connect=document.getElementById("connectTikTok");
 
