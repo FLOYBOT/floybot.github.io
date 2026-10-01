@@ -155,6 +155,48 @@
         <div class="bot-card"><small>MONITOR</small><strong>24/7</strong><span>Статус подключения</span></div>
       </div>
 
+      <section class="agent-console" id="agent">
+        <div class="agent-head">
+          <div>
+            <div class="agent-kicker">/ AI AGENT <span>SAFE MODE</span></div>
+            <h3>AI-агент <span>FLOWBOT.</span></h3>
+            <p>Анализирует доступные данные TikTok и готовит действия для ручного подтверждения. Автоматические лайки и комментарии отключены.</p>
+          </div>
+          <div class="agent-state"><i></i><b id="agentState">STANDBY</b></div>
+        </div>
+
+        <div class="agent-grid">
+          <div class="agent-task">
+            <div class="agent-task-top"><span>01</span><b>ANALYZE</b><em>READY</em></div>
+            <h4>Анализ аккаунта</h4>
+            <p>Проверить подключение и доступные TikTok-разрешения.</p>
+            <button type="button" data-agent-action="analyze">Запустить анализ</button>
+          </div>
+          <div class="agent-task">
+            <div class="agent-task-top"><span>02</span><b>FEED</b><em>API</em></div>
+            <h4>Видео и рекомендации</h4>
+            <p>Подключение ленты через официальный API появится после одобрения <code>video.list</code>.</p>
+            <button type="button" data-agent-action="feed">Проверить доступ</button>
+          </div>
+          <div class="agent-task">
+            <div class="agent-task-top"><span>03</span><b>COMMENTS</b><em>MANUAL</em></div>
+            <h4>Помощник комментариев</h4>
+            <p>AI может подготовить текст, а публикация остаётся под твоим контролем.</p>
+            <button type="button" data-agent-action="comment">Подготовить ответ</button>
+          </div>
+        </div>
+
+        <div class="agent-log">
+          <div><span class="agent-pulse"></span><b>AGENT LOG</b><small id="agentLog">Система готова. Ожидает команды.</small></div>
+          <div class="agent-permissions">
+            <span><i class="perm-on"></i> OAuth</span>
+            <span><i class="perm-on"></i> Account</span>
+            <span><i class="perm-wait"></i> video.list</span>
+            <span><i class="perm-off"></i> Auto actions</span>
+          </div>
+        </div>
+      </section>
+
       <div class="bot-rules">
         <div><span>01</span><div><b>Официальный Login Kit</b><p>Переход на TikTok для авторизации</p></div><i class="rule-on"></i></div>
         <div><span>02</span><div><b>Защищённый возврат</b><p>Возврат в FLOWBOT после подтверждения</p></div><i class="rule-on"></i></div>
