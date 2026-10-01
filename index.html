@@ -398,7 +398,7 @@ if(supportForm) supportForm.addEventListener("submit",async(e)=>{
   supportMessages.appendChild(typing);
   supportMessages.scrollTop=supportMessages.scrollHeight;
   try{
-    const r=await fetch(FLOWBOT_API+"/api/support/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message,history:supportHistory.slice(-10)})});
+    const r=await fetch(FLOWBOT_API+"/api/support/chat",{method:"POST",headers:{"Content-Type":"text/plain;charset=UTF-8"},body:JSON.stringify({message,history:supportHistory.slice(-10)})});
     const data=await r.json();
     typing.remove();
     if(!r.ok) throw new Error((data.error||"Support unavailable")+(data.code?" ["+data.code+"]":""));
