@@ -8,7 +8,11 @@ if(connect){
 
 async function refreshTikTokStatus(){
   try{
+    const session=sessionStorage.getItem("flowbot_session");
+    const headers=session?{"Authorization":"Bearer "+session}:{};
+
     const r=await fetch(FLOWBOT_API+"/api/tiktok/status",{
+      ...session?{headers}: {},
       credentials:"include",
       cache:"no-store"
     });
@@ -28,23 +32,51 @@ async function refreshTikTokStatus(){
   }catch(e){}
 }
 
-refreshTikTokStatus();
+async function claimTikTok(code){
+  try{
+    const r=await fetch(FLOWBOT_API+"/api/tiktok/claim",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      credentials:"include",
+      body:JSON.stringify({code})
+    });
 
-const params=new URLSearchParams(location.search);
+    const data=await r.json();
 
-if(params.get("tiktok")==="connected"){
-  // После OAuth TikTok возвращает пользователя на сайт.
-  // Backend уже сохранил аккаунт и установил flowbot_session.
-  // Повторяем запрос статуса после возврата, чтобы обновить карточку.
-  setTimeout(refreshTikTokStatus,500);
-  setTimeout(refreshTikTokStatus,1500);
+    if(!r.ok || !data.connected || !data.session){
+      throw new Error(data.error||"Не удалось подтвердить подключение");
+    }
 
-  history.replaceState({}, "", location.pathname+"#bot");
+    sessionStorage.setItem("flowbot_session",data.session);
+
+    const card=document.querySelector(".bot-card strong");
+    const status=document.querySelector(".bot-card span");
+
+    if(card)card.textContent="@"+(data.account.display_name||"connected");
+    if(status)status.textContent="TikTok подключён";
+    if(connect)connect.textContent="TikTok подключён ✓";
+  }catch(e){
+    alert("Не удалось подтвердить подключение TikTok: "+e.message);
+  }
 }
 
-if(params.get("tiktok_error")){
-  alert("Не удалось подключить TikTok: "+params.get("tiktok_error"));
+refreshTikTokStatus();
+
+const hash=location.hash;
+const hashQuery=hash.includes("?")?hash.slice(hash.indexOf("?")+1):"";
+const hashParams=new URLSearchParams(hashQuery);
+const oauthCode=hashParams.get("code");
+
+if(hashParams.get("tiktok")==="connected" && oauthCode){
+  claimTikTok(oauthCode);
   history.replaceState({}, "", location.pathname+"#bot");
+}else{
+  const params=new URLSearchParams(location.search);
+
+  if(params.get("tiktok_error")){
+    alert("Не удалось подключить TikTok: "+params.get("tiktok_error"));
+    history.replaceState({}, "", location.pathname+"#bot");
+  }
 }
 
 const io=new IntersectionObserver(
