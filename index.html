@@ -401,12 +401,12 @@ if(supportForm) supportForm.addEventListener("submit",async(e)=>{
     const r=await fetch(FLOWBOT_API+"/api/support/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message,history:supportHistory.slice(-10)})});
     const data=await r.json();
     typing.remove();
-    if(!r.ok) throw new Error(data.error||"Support unavailable");
+    if(!r.ok) throw new Error((data.error||"Support unavailable")+(data.code?" ["+data.code+"]":""));
     addSupportMessage(data.answer,"assistant");
     supportHistory.push({role:"assistant",content:data.answer});
   }catch(error){
     typing.remove();
-    addSupportMessage("Сейчас AI-поддержка недоступна. Попробуй ещё раз через несколько секунд или напиши владельцу FLOWBOT.","assistant");
+    addSupportMessage("Ошибка AI-поддержки: "+(error?.message||"неизвестная ошибка"),"assistant");
   }
 });
 
