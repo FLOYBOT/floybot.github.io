@@ -225,7 +225,24 @@
     </div>
   </section>
 
-  <section class="contact" id="contact">
+  <button class="support-fab" id="supportFab" type="button" aria-label="Открыть поддержку"><span>AI</span><b>Поддержка</b></button>
+
+<div class="support-widget" id="supportWidget" aria-hidden="true">
+  <div class="support-head">
+    <div><span class="support-status"></span><b>FLOWBOT SUPPORT</b><small>AI • 24/7</small></div>
+    <button id="supportClose" type="button" aria-label="Закрыть поддержку">×</button>
+  </div>
+  <div class="support-messages" id="supportMessages">
+    <div class="support-message support-ai">Привет! Я AI-помощник FLOWBOT. Задай вопрос по подключению TikTok, Console или работе сайта.</div>
+  </div>
+  <form class="support-form" id="supportForm">
+    <input id="supportInput" maxlength="2000" autocomplete="off" placeholder="Напиши вопрос…" aria-label="Вопрос для поддержки">
+    <button type="submit" aria-label="Отправить">↗</button>
+  </form>
+  <div class="support-note">AI-поддержка • не отправляй пароли и секретные ключи</div>
+</div>
+
+<section class="contact" id="contact">
     <div class="contact-icon"><img src="flowbot-icon.svg" alt=""></div>
     <p class="kicker">05 — START</p>
     <h2>Готово к<br><span>подключению.</span></h2>
@@ -345,6 +362,53 @@ if(demoStart){
     },steps.length*1300+300);
   });
 }
+
+const supportFab=document.getElementById("supportFab");
+const supportWidget=document.getElementById("supportWidget");
+const supportClose=document.getElementById("supportClose");
+const supportForm=document.getElementById("supportForm");
+const supportInput=document.getElementById("supportInput");
+const supportMessages=document.getElementById("supportMessages");
+const supportHistory=[];
+
+function addSupportMessage(text,role){
+  const el=document.createElement("div");
+  el.className="support-message "+(role==="user"?"support-user":"support-ai");
+  el.textContent=text;
+  supportMessages.appendChild(el);
+  supportMessages.scrollTop=supportMessages.scrollHeight;
+}
+function toggleSupport(open){
+  supportWidget.classList.toggle("is-open",open);
+  supportWidget.setAttribute("aria-hidden",open?"false":"true");
+  if(open) setTimeout(()=>supportInput?.focus(),80);
+}
+if(supportFab) supportFab.addEventListener("click",()=>toggleSupport(true));
+if(supportClose) supportClose.addEventListener("click",()=>toggleSupport(false));
+if(supportForm) supportForm.addEventListener("submit",async(e)=>{
+  e.preventDefault();
+  const message=supportInput.value.trim();
+  if(!message)return;
+  supportInput.value="";
+  addSupportMessage(message,"user");
+  supportHistory.push({role:"user",content:message});
+  const typing=document.createElement("div");
+  typing.className="support-message support-ai support-typing";
+  typing.textContent="AI печатает…";
+  supportMessages.appendChild(typing);
+  supportMessages.scrollTop=supportMessages.scrollHeight;
+  try{
+    const r=await fetch(FLOWBOT_API+"/api/support/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({message,history:supportHistory.slice(-10)})});
+    const data=await r.json();
+    typing.remove();
+    if(!r.ok) throw new Error(data.error||"Support unavailable");
+    addSupportMessage(data.answer,"assistant");
+    supportHistory.push({role:"assistant",content:data.answer});
+  }catch(error){
+    typing.remove();
+    addSupportMessage("Сейчас AI-поддержка недоступна. Попробуй ещё раз через несколько секунд или напиши владельцу FLOWBOT.","assistant");
+  }
+});
 
 const io=new IntersectionObserver(es=>es.forEach(e=>{
   if(e.isIntersecting){
