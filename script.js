@@ -6,9 +6,13 @@ if(connect){
   connect.href=FLOWBOT_API+"/api/tiktok/oauth";
 }
 
-(async()=>{
+async function refreshTikTokStatus(){
   try{
-    const r=await fetch(FLOWBOT_API+"/api/tiktok/status",{credentials:"include"});
+    const r=await fetch(FLOWBOT_API+"/api/tiktok/status",{
+      credentials:"include",
+      cache:"no-store"
+    });
+
     if(!r.ok)return;
 
     const data=await r.json();
@@ -22,11 +26,19 @@ if(connect){
       if(connect)connect.textContent="TikTok подключён ✓";
     }
   }catch(e){}
-})();
+}
+
+refreshTikTokStatus();
 
 const params=new URLSearchParams(location.search);
 
 if(params.get("tiktok")==="connected"){
+  // После OAuth TikTok возвращает пользователя на сайт.
+  // Backend уже сохранил аккаунт и установил flowbot_session.
+  // Повторяем запрос статуса после возврата, чтобы обновить карточку.
+  setTimeout(refreshTikTokStatus,500);
+  setTimeout(refreshTikTokStatus,1500);
+
   history.replaceState({}, "", location.pathname+"#bot");
 }
 
