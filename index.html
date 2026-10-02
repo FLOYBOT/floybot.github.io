@@ -250,7 +250,7 @@
   </div>
   <div class="pricing-grid" id="pricingGrid"><div class="pricing-loading">Загружаю тарифы…</div></div>
   <div class="pricing-note">Подключённые TikTok-аккаунты не публикуются на сайте: данные привязаны к отдельной пользовательской сессии.</div>
-</section>\n<section class="contact" id="contact">
+</section><section class="contact" id="contact">
     <div class="contact-icon"><img src="flowbot-icon.svg" alt=""></div>
     <p class="kicker">05 — START</p>
     <h2>Готово к<br><span>подключению.</span></h2>
@@ -478,7 +478,7 @@ if(demoStart){
   });
 }
 
-\nasync function loadPricing(){
+async function loadPricing(){
   const grid=document.getElementById("pricingGrid");
   if(!grid)return;
   try{
@@ -495,7 +495,7 @@ if(demoStart){
   }
 }
 loadPricing();
-\nconst supportFab=document.getElementById("supportFab");
+const supportFab=document.getElementById("supportFab");
 const supportWidget=document.getElementById("supportWidget");
 const supportClose=document.getElementById("supportClose");
 const supportForm=document.getElementById("supportForm");
