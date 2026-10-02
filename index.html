@@ -242,7 +242,15 @@
   <div class="support-note">AI-поддержка • не отправляй пароли и секретные ключи</div>
 </div>
 
-<section class="contact" id="contact">
+<section class="pricing" id="pricing">
+  <div class="section-kicker">SUBSCRIPTIONS</div>
+  <div class="pricing-head">
+    <div><h2>FLOWBOT без лишнего.</h2><p>Выбирай срок доступа и переходи в Telegram. Оплата цифровой услуги проходит через Telegram Stars.</p></div>
+    <div class="pricing-badge">PRIVATE BY DESIGN</div>
+  </div>
+  <div class="pricing-grid" id="pricingGrid"><div class="pricing-loading">Загружаю тарифы…</div></div>
+  <div class="pricing-note">Подключённые TikTok-аккаунты не публикуются на сайте: данные привязаны к отдельной пользовательской сессии.</div>
+</section>\n<section class="contact" id="contact">
     <div class="contact-icon"><img src="flowbot-icon.svg" alt=""></div>
     <p class="kicker">05 — START</p>
     <h2>Готово к<br><span>подключению.</span></h2>
@@ -470,7 +478,24 @@ if(demoStart){
   });
 }
 
-const supportFab=document.getElementById("supportFab");
+\nasync function loadPricing(){
+  const grid=document.getElementById("pricingGrid");
+  if(!grid)return;
+  try{
+    const r=await fetch(FLOWBOT_API+"/api/telegram/plans",{cache:"no-store"});
+    const data=await r.json();
+    if(!r.ok)throw new Error();
+    grid.innerHTML=data.plans.map(p=>{
+      const price=p.stars?'<strong>'+p.stars+' ⭐</strong>':'<strong>Скоро</strong>';
+      const action=p.stars&&data.bot_username?'<a class="pricing-btn" href="https://t.me/'+encodeURIComponent(data.bot_username)+'?start=plans">Открыть Telegram</a>':'<span class="pricing-btn pricing-disabled">Тариф настраивается</span>';
+      return '<article class="pricing-card'+(p.code==="3m"?" pricing-featured":"")+'"><div class="pricing-duration">'+p.label+'</div>'+price+'<small>'+(p.recurring?"Автопродление каждый месяц":"Единоразовый пакет доступа")+'</small>'+action+'</article>';
+    }).join("");
+  }catch(e){
+    grid.innerHTML='<div class="pricing-loading">Тарифы временно недоступны. Попробуй позже.</div>';
+  }
+}
+loadPricing();
+\nconst supportFab=document.getElementById("supportFab");
 const supportWidget=document.getElementById("supportWidget");
 const supportClose=document.getElementById("supportClose");
 const supportForm=document.getElementById("supportForm");
