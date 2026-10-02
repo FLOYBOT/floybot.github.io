@@ -498,45 +498,63 @@ document.querySelectorAll("[data-agent-action]").forEach(button=>{
 });
 
 const demoStart=document.getElementById("startAgentDemo");
+let demoTimers=[];
+let demoRun=0;
+
+function resetDemo(){
+  demoTimers.forEach(clearTimeout);
+  demoTimers=[];
+  ["demoWatch","demoLike","demoComment","demoNext"].forEach(id=>document.getElementById(id)?.classList.remove("demo-done"));
+  ["demoWatchText","demoLikeText","demoCommentText","demoNextText"].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.textContent="WAIT";
+  });
+  const video=document.getElementById("demoVideo");
+  const title=document.getElementById("demoTitle");
+  const meta=document.getElementById("demoMeta");
+  if(video) video.textContent="01";
+  if(title) title.textContent="Подготовка следующего видео";
+  if(meta) meta.textContent="Ожидание запуска";
+}
+
 if(demoStart){
   demoStart.addEventListener("click",()=>{
+    const run=++demoRun;
+    resetDemo();
+    demoStart.disabled=true;
+    demoStart.textContent="Демо запущено…";
+
     const video=document.getElementById("demoVideo");
     const title=document.getElementById("demoTitle");
     const meta=document.getElementById("demoMeta");
-    const ids=["demoWatch","demoLike","demoComment","demoNext"];
-    const texts=["demoWatchText","demoLikeText","demoCommentText","demoNextText"];
-    ids.forEach(id=>document.getElementById(id)?.classList.remove("demo-done"));
-    texts.forEach(id=>{const el=document.getElementById(id);if(el)el.textContent="WAIT";});
-    if(video)video.textContent="01";
-    if(title)title.textContent="Подготовка следующего видео";
-    if(meta)meta.textContent="Агент запускается…";
-    demoStart.disabled=true;
-    demoStart.textContent="Демо запущено";
 
     const steps=[
       ["01","Анализ видео","AI анализирует демонстрационный ролик.","demoWatch","demoWatchText","ANALYZE"],
-      ["01","Оценка реакции","Действие «лайк» только отображается как предложение.","demoLike","demoLikeText","SUGGEST"],
+      ["01","Оценка реакции","Действие отображается только как предложение.","demoLike","demoLikeText","SUGGEST"],
       ["01","Черновик комментария","AI готовит пример текста без публикации.","demoComment","demoCommentText","DRAFT"],
-      ["02","Следующее видео","Интерфейс показывает переход к следующему шагу.","demoNext","demoNextText","NEXT"]
+      ["02","Следующее видео","Интерфейс переходит к следующему демонстрационному шагу.","demoNext","demoNextText","NEXT"]
     ];
 
     steps.forEach((step,i)=>{
-      setTimeout(()=>{
+      const timer=setTimeout(()=>{
+        if(run!==demoRun)return;
         if(video)video.textContent=step[0];
         if(title)title.textContent=step[1];
         if(meta)meta.textContent=step[2];
-        const textEl=document.getElementById(step[4]);
-        const dotEl=document.getElementById(step[3]);
-        if(textEl)textEl.textContent=step[5];
-        if(dotEl)dotEl.classList.add("demo-done");
-      },i*1300);
+        document.getElementById(step[4])?.replaceChildren(document.createTextNode(step[5]));
+        document.getElementById(step[3])?.classList.add("demo-done");
+      },i*1100);
+      demoTimers.push(timer);
     });
 
-    setTimeout(()=>{
+    const finish=setTimeout(()=>{
+      if(run!==demoRun)return;
       if(meta)meta.textContent="Демонстрационный цикл завершён";
       demoStart.disabled=false;
       demoStart.textContent="Повторить демо";
-    },steps.length*1300+300);
+      demoTimers=[];
+    },steps.length*1100+250);
+    demoTimers.push(finish);
   });
 }
 
