@@ -314,15 +314,17 @@ async function claimTikTok(code){
 const hash=location.hash;
 const hashQuery=hash.includes("?")?hash.slice(hash.indexOf("?")+1):"";
 const hashParams=new URLSearchParams(hashQuery);
-const oauthCode=hashParams.get("code");
+const queryParams=new URLSearchParams(location.search);
+const oauthCode=hashParams.get("code") || queryParams.get("code");
+const oauthConnected=hashParams.get("tiktok")==="connected" || queryParams.get("tiktok")==="connected";
 
-if(hashParams.get("tiktok")==="connected" && oauthCode){
+if(oauthConnected && oauthCode){
   claimTikTok(oauthCode);
   history.replaceState({}, "", location.pathname+"#bot");
 }else{
-  const params=new URLSearchParams(location.search);
-  if(params.get("tiktok_error")){
-    alert("Не удалось подключить TikTok: "+params.get("tiktok_error"));
+  const oauthError=queryParams.get("tiktok_error") || hashParams.get("tiktok_error");
+  if(oauthError){
+    alert("Не удалось подключить TikTok: "+oauthError);
     history.replaceState({}, "", location.pathname+"#bot");
   }
 }
