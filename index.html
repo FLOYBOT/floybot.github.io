@@ -206,6 +206,21 @@
           <div class="demo-note">Это интерактивная визуализация интерфейса агента. Она не ставит лайки, не публикует комментарии и не управляет TikTok.</div>
         </div>
 
+        <div class="agent-result" id="agentResult" hidden>
+          <div class="result-head">
+            <div><span class="agent-kicker">/ ACCOUNT INTELLIGENCE</span><h4 id="resultTitle">Результат анализа</h4></div>
+            <span id="resultUpdated">—</span>
+          </div>
+          <div class="result-grid" id="resultGrid"></div>
+          <div class="result-table-wrap" id="resultTableWrap" hidden>
+            <table class="result-table">
+              <thead><tr><th>Видео</th><th>Дата</th><th>Просмотры</th><th>Лайки</th><th>Комментарии</th><th>Репосты</th></tr></thead>
+              <tbody id="resultVideos"></tbody>
+            </table>
+          </div>
+          <div class="result-limitations" id="resultLimitations"></div>
+        </div>
+
         <div class="agent-log">
           <div><span class="agent-pulse"></span><b>AGENT LOG</b><small id="agentLog">Система готова. Ожидает команды.</small></div>
           <div class="agent-permissions">
@@ -349,6 +364,33 @@ function setAgentLog(text){
 function formatNumber(value){
   return new Intl.NumberFormat("ru-RU").format(Number(value||0));
 }
+function formatDate(value){
+  if(!value) return "—";
+  const d=new Date(Number(value)*1000);
+  return Number.isNaN(d.getTime()) ? "—" : d.toLocaleString("ru-RU",{dateStyle:"medium",timeStyle:"short"});
+}
+function showResult(title, cards=[], videos=[], limitations=[]){
+  const box=document.getElementById("agentResult");
+  const grid=document.getElementById("resultGrid");
+  const titleEl=document.getElementById("resultTitle");
+  const updated=document.getElementById("resultUpdated");
+  const table=document.getElementById("resultTableWrap");
+  const tbody=document.getElementById("resultVideos");
+  const limit=document.getElementById("resultLimitations");
+  if(!box||!grid)return;
+  box.hidden=false;
+  if(titleEl)titleEl.textContent=title;
+  if(updated)updated.textContent="Обновлено: "+new Date().toLocaleTimeString("ru-RU");
+  grid.innerHTML=cards.map(x=>'<div class="result-card"><small>'+x.label+'</small><strong>'+x.value+'</strong><span>'+ (x.note||"") +'</span></div>').join("");
+  if(videos.length){
+    table.hidden=false;
+    tbody.innerHTML=videos.map(v=>'<tr><td>'+String(v.title||v.video_description||"Без названия").replace(/[<>]/g,"")+'</td><td>'+formatDate(v.create_time)+'</td><td>'+formatNumber(v.view_count)+'</td><td>'+formatNumber(v.like_count)+'</td><td>'+formatNumber(v.comment_count)+'</td><td>'+formatNumber(v.share_count)+'</td></tr>').join("");
+  }else{
+    table.hidden=true;
+    tbody.innerHTML="";
+  }
+  limit.innerHTML=limitations.length ? '<b>Ограничения API</b><ul>'+limitations.map(x=>'<li>'+x+'</li>').join("")+'</ul>' : '<b>Данные проверены через официальный TikTok API.</b>';
+}
 
 async function runAccountAnalysis(){
   setAgentState("ANALYZING");
@@ -357,24 +399,34 @@ async function runAccountAnalysis(){
   const data=await r.json();
   if(!r.ok) throw new Error(data.error||"Не удалось получить анализ");
   const a=data.analysis;
-  const lines=[
-    "Аккаунт: "+(a.basic.display_name||a.account),
-    "Open ID: "+(a.basic.open_id||"—"),
-    "Разрешения: "+(a.scopes?.join(", ")||"—")
+  const cards=[
+    {label:"Аккаунт",value:a.basic.display_name||a.account||"—",note:"Display name"},
+    {label:"Open ID",value:a.basic.open_id||"—",note:"TikTok идентификатор"},
+    {label:"Разрешения",value:String(a.scopes?.length||0),note:(a.scopes||[]).join(", ")||"—"}
   ];
   if(a.stats){
-    lines.push("Подписчики: "+formatNumber(a.stats.followers));
-    lines.push("Подписки: "+formatNumber(a.stats.following));
-    lines.push("Лайки: "+formatNumber(a.stats.likes));
-    lines.push("Видео: "+formatNumber(a.stats.videos));
+    cards.push(
+      {label:"Подписчики",value:formatNumber(a.stats.followers),note:"follower_count"},
+      {label:"Подписки",value:formatNumber(a.stats.following),note:"following_count"},
+      {label:"Лайки",value:formatNumber(a.stats.likes),note:"likes_count"},
+      {label:"Видео",value:formatNumber(a.stats.videos),note:"video_count"}
+    );
   }
   if(a.profile){
-    lines.push("Верификация: "+(a.profile.is_verified?"да":"нет"));
-    if(a.profile.bio_description) lines.push("Bio: "+a.profile.bio_description);
+    cards.push(
+      {label:"Верификация",value:a.profile.is_verified?"Да":"Нет",note:"is_verified"},
+      {label:"Bio",value:a.profile.bio_description||"—",note:"bio_description"}
+    );
   }
-  if(a.limitations?.length) lines.push("Что можно расширить: "+a.limitations.join(" "));
+  if(a.token){
+    cards.push(
+      {label:"Access token",value:a.token.access_expires_at?formatDate(a.token.access_expires_at):"—",note:"срок действия"},
+      {label:"Refresh token",value:a.token.refresh_expires_at?formatDate(a.token.refresh_expires_at):"—",note:"срок действия"}
+    );
+  }
+  showResult("Анализ аккаунта",cards,[],a.limitations||[]);
   setAgentState("ONLINE");
-  setAgentLog(lines.join(" • "));
+  setAgentLog("Анализ завершён. Показаны только данные, которые реально вернул официальный TikTok API.");
   return a;
 }
 
@@ -393,9 +445,17 @@ async function runVideoCheck(){
     setAgentLog("Доступ к video.list есть, но TikTok не вернул публичные видео.");
     return videos;
   }
-  const names=videos.slice(0,5).map((v,i)=>(i+1)+". "+(v.title||v.video_description||"Без названия")).join(" • ");
+  showResult(
+    "Публичные видео аккаунта",
+    [
+      {label:"Видео получено",value:String(videos.length),note:"из текущей страницы API"},
+      {label:"Состояние",value:"Доступно",note:"video.list"}
+    ],
+    videos,
+    []
+  );
   setAgentState("ONLINE");
-  setAgentLog("Получено видео: "+videos.length+" • "+names);
+  setAgentLog("Получено видео: "+videos.length+". Таблица показывает фактические поля, возвращённые TikTok.");
   return videos;
 }
 
