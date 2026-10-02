@@ -320,6 +320,113 @@ if(hashParams.get("tiktok")==="connected" && oauthCode){
 }
 
 
+const agentState=document.getElementById("agentState");
+const agentLog=document.getElementById("agentLog");
+
+function agentSession(){
+  return sessionStorage.getItem("flowbot_session") || "";
+}
+function agentHeaders(){
+  const session=agentSession();
+  return session ? {"Authorization":"Bearer "+session} : {};
+}
+function setAgentState(text){
+  if(agentState) agentState.textContent=text;
+}
+function setAgentLog(text){
+  if(agentLog) agentLog.textContent=text;
+}
+function formatNumber(value){
+  return new Intl.NumberFormat("ru-RU").format(Number(value||0));
+}
+
+async function runAccountAnalysis(){
+  setAgentState("ANALYZING");
+  setAgentLog("Запрашиваю актуальные данные профиля TikTok…");
+  const r=await fetch(FLOWBOT_API+"/api/tiktok/analyze",{headers:agentHeaders(),credentials:"include",cache:"no-store"});
+  const data=await r.json();
+  if(!r.ok) throw new Error(data.error||"Не удалось получить анализ");
+  const a=data.analysis;
+  const lines=[
+    "Аккаунт: "+(a.basic.display_name||a.account),
+    "Open ID: "+(a.basic.open_id||"—"),
+    "Разрешения: "+(a.scopes?.join(", ")||"—")
+  ];
+  if(a.stats){
+    lines.push("Подписчики: "+formatNumber(a.stats.followers));
+    lines.push("Подписки: "+formatNumber(a.stats.following));
+    lines.push("Лайки: "+formatNumber(a.stats.likes));
+    lines.push("Видео: "+formatNumber(a.stats.videos));
+  }
+  if(a.profile){
+    lines.push("Верификация: "+(a.profile.is_verified?"да":"нет"));
+    if(a.profile.bio_description) lines.push("Bio: "+a.profile.bio_description);
+  }
+  if(a.limitations?.length) lines.push("Что можно расширить: "+a.limitations.join(" "));
+  setAgentState("ONLINE");
+  setAgentLog(lines.join(" • "));
+  return a;
+}
+
+async function runVideoCheck(){
+  setAgentState("LOADING");
+  setAgentLog("Проверяю доступ к публичным видео через Display API…");
+  const r=await fetch(FLOWBOT_API+"/api/tiktok/videos",{headers:agentHeaders(),credentials:"include",cache:"no-store"});
+  const data=await r.json();
+  if(!r.ok){
+    if(data.code==="SCOPE_REQUIRED") throw new Error("TikTok пока не выдал scope video.list. Подключение работает, но список видео станет доступен после одобрения и повторной авторизации.");
+    throw new Error(data.error||"Не удалось получить видео");
+  }
+  const videos=data.videos||[];
+  if(!videos.length){
+    setAgentState("ONLINE");
+    setAgentLog("Доступ к video.list есть, но TikTok не вернул публичные видео.");
+    return videos;
+  }
+  const names=videos.slice(0,5).map((v,i)=>(i+1)+". "+(v.title||v.video_description||"Без названия")).join(" • ");
+  setAgentState("ONLINE");
+  setAgentLog("Получено видео: "+videos.length+" • "+names);
+  return videos;
+}
+
+async function prepareComment(){
+  setAgentState("ASSIST");
+  setAgentLog("Готовлю текст без публикации…");
+  const prompt="Подготовь короткий нейтральный комментарий для TikTok, который можно вручную проверить перед публикацией. Не утверждай, что ты видел конкретное видео. Дай один вариант на русском.";
+  try{
+    const r=await fetch(FLOWBOT_API+"/api/support/chat",{
+      method:"POST",
+      headers:{"Content-Type":"text/plain;charset=UTF-8"},
+      body:JSON.stringify({message:prompt,history:[]})
+    });
+    const data=await r.json();
+    if(!r.ok) throw new Error(data.error||"AI недоступен");
+    setAgentState("ASSIST");
+    setAgentLog("Черновик: "+data.answer+" • Публикация только вручную.");
+  }catch(error){
+    setAgentState("MANUAL");
+    setAgentLog("Черновик: «Интересный ролик! Спасибо, что поделились.» • Публикация только вручную.");
+  }
+}
+
+document.querySelectorAll("[data-agent-action]").forEach(button=>{
+  button.addEventListener("click",async()=>{
+    if(button.disabled) return;
+    const action=button.dataset.agentAction;
+    document.querySelectorAll("[data-agent-action]").forEach(b=>b.disabled=true);
+    try{
+      if(action==="analyze") await runAccountAnalysis();
+      if(action==="feed") await runVideoCheck();
+      if(action==="comment") await prepareComment();
+    }catch(error){
+      setAgentState("ERROR");
+      setAgentLog("Ошибка: "+(error?.message||"неизвестная ошибка"));
+    }finally{
+      document.querySelectorAll("[data-agent-action]").forEach(b=>b.disabled=false);
+    }
+  });
+});
+
 const demoStart=document.getElementById("startAgentDemo");
 if(demoStart){
   demoStart.addEventListener("click",()=>{
